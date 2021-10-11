@@ -1,5 +1,4 @@
 from main import bot
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from markup import del_btn, await_btn
 
@@ -31,3 +30,4 @@ async def del_result(chat_id, result):
         await bot.send_message(chat_id, text=f'Запись удалена.\nДля продолжения работы с ботом - /start')
     else:
         await bot.send_message(chat_id, text=f'Запись с таким ID не найдена.\nДля продолжения работы с ботом - /start')
+

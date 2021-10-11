@@ -1,12 +1,10 @@
 import sqlite3
 import random
-import time
 
 from out import output_info, del_result
 
 conn = sqlite3.connect("database.db")
 cursor = conn.cursor()
-
 
 # Создание таблиц
 cursor.execute('CREATE TABLE IF NOT EXISTS finds(ID TEXT, name TEXT, thing TEXT, place TEXT, contact TEXT, '
@@ -23,8 +21,8 @@ async def add_info(lst):
                     (ID, name, thing, place, contact, photo)
                     VALUES (?, ?, ?, ?, ?, ?)""", (lst,))
     conn.commit()
-
-    del lst
+    await check_await(lst)
+    lst.clear()
     print("Данные успешно вставлены в таблицу")
 
 
@@ -54,11 +52,22 @@ async def remove_info(chat_id, id_element):
         result = False
         await del_result(chat_id, result)
     else:
+        await remove_req(chat_id, id_element)
         sql_select_query = """delete from finds where ID = ?"""
         cursor.execute(sql_select_query, (id_element,))
         result = True
         await del_result(chat_id, result)
         conn.commit()
+
+
+async def remove_req(chat_id, id_element):
+    sql_select_query = """select * from finds where ID = ?"""
+    cursor.execute(sql_select_query, (id_element,))
+    records = cursor.fetchall()
+    thing = records[0][2]
+    sql_remove_req = """delete from await where chat_id = ? and thing = ?"""
+    cursor.execute(sql_remove_req, (chat_id, thing), )
+    conn.commit()
 
 
 async def await_database(request):
@@ -68,8 +77,19 @@ async def await_database(request):
     request.insert(0, await_id)
     cursor.executemany("""INSERT INTO await (req_id, chat_id, name, thing) VALUES (?, ?, ?, ?)""", (request,))
     conn.commit()
-    request.clear()
     print("Данные успешно вставлены в таблицу для поиска")
 
 
+async def check_await(lst):
+    check_result =[]
+    sql_request = 'select * from await where thing =?'
+    cursor.execute(sql_request,(lst[2],))
+    records = cursor.fetchall()
+    if len(records) != 0:
+        for row in records:
+            check_result.append(row[0])
+            check_result.append(row[1])
+            check_result.append(row[2])
+            check_result.append(row[3])
+        await output_info(check_result[1],lst)
 

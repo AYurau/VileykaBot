@@ -1,14 +1,15 @@
-import random
+import markup
 
 from Base import add_info, find_user, remove_info, await_database
 from main import bot, dp
 from aiogram import types, executor
-from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import StatesGroup, State
 
 
 class u_info(StatesGroup):
+    start = State()
     thing = State()
     place = State()
     photo = State()
@@ -28,7 +29,6 @@ class await_thing(StatesGroup):
     user_thing = State()
 
 
-
 lst = []
 req_lst = []
 
@@ -44,10 +44,11 @@ async def begin(message: types.Message):
 
 
 @dp.message_handler(content_types=['text'])
-async def begin(message: types.Message):
+async def name(message: types.Message):
+    lst.clear()
     markup = InlineKeyboardMarkup()
     but_1 = InlineKeyboardButton('Да,я нашёл!', callback_data='but_1')
-    but_2 = InlineKeyboardButton('Нет, я потерял.', callback_data='but_2')
+    but_2 = InlineKeyboardButton('Нет,я потерял.', callback_data='but_2')
     markup.add(but_1, but_2)
     lst.append(message.text)
     await bot.send_message(chat_id=message.from_user.id, text=f'Очень приятно, {message.text}. Вы что-то нашли?',
@@ -56,16 +57,22 @@ async def begin(message: types.Message):
 
 @dp.callback_query_handler(lambda c: c.data == "but_1")  # Действие для нашедшего
 async def form(message: types.Message):
-    await bot.send_message(chat_id=message.from_user.id, text='1.Скажите, что вы нашли?\n(Просто название предмета. '
-                                                              'Например: телефон, кошелёк, карта)')
+    message_obj = await bot.send_message(chat_id=message.from_user.id, text='1.Скажите, что вы нашли?\n(Просто '
+                                                                            'название предмета. '
+                                                                            'Например: телефон, кошелёк, карта)',
+                                         reply_markup=markup.cancel_btn)
+    await bot.delete_message(chat_id=message.from_user.id, message_id=message_obj.message_id - 1)
     await message.answer()
     await u_info.thing.set()
 
 
 @dp.callback_query_handler(lambda c: c.data == "but_2")  # Действие для поиска
 async def finder(message: types.Message):
-    await bot.send_message(chat_id=message.from_user.id, text='1.Скажите, что вы потеряли?\n(Просто название предмета. '
-                                                              'Например: телефон, кошелёк, карта)')
+    message_obj = await bot.send_message(chat_id=message.from_user.id, text='1.Скажите, что вы потеряли?\n(Просто '
+                                                                            'название предмета. '
+                                                                            'Например: телефон, кошелёк, карта)',
+                                         reply_markup=markup.cancel_btn)
+    await bot.delete_message(chat_id=message.from_user.id, message_id=message_obj.message_id - 1)
     await message.answer()
     await user_find.thing_f.set()
 
@@ -78,7 +85,8 @@ async def copy_info(message: types.Message):
 
 
 @dp.callback_query_handler(lambda c: c.data == "await_btn")  # Действие для запроса
-async def await_request(message: types.Message):
+async def await_request(message: types.Message, state: FSMContext):
+    await state.finish()
     chat_user = message.from_user.id
     req_lst.append(chat_user)
     await bot.send_message(chat_id=message.from_user.id, text='1.Скажите, как вас зовут?')
@@ -86,8 +94,22 @@ async def await_request(message: types.Message):
     await message.answer()
 
 
+@dp.callback_query_handler(lambda c: c.data == "cancel_btn", state=u_info.thing)  # Действие для возврата
+async def cancel_thing(callback_query: types.CallbackQuery, state: FSMContext):
+    await bot.answer_callback_query(callback_query.id)
+
+    await bot.send_message(chat_id=callback_query.from_user.id,
+                           text='Привет. Я - телеграм бот, который помогает жителям '
+                                'г.Вилейка искать то, что они теряют. А тем, кто нашёл '
+                                'чужую вещь - скорее найти владельца.'
+                                'Если вы нашли какую-то ошибку в работе бота - '
+                                'пожалуйста напишите мне @kishevatov\n'
+                                'Скажите, как вас зовут?')
+    await state.finish()
+
+
 @dp.message_handler(state=remove_thing.remove)
-async def remove_element(message: types.Message,state:FSMContext):
+async def remove_element(message: types.Message, state: FSMContext):
     id_element = message.text
     await remove_info(message.from_user.id, id_element)
     await state.finish()
@@ -158,12 +180,9 @@ async def await_name(message: types.Message, state: FSMContext):
     await bot.send_message(chat_id=message.from_user.id, text='Ваш запрос в базе!\nКак-только что-то появиться по '
                                                               'вашему запросу - мы вам напишем.\nДля продолжения '
                                                               'работы /start')
+    await state.finish()
     await await_database(req_lst)
     req_lst.clear()
-    await state.finish()
-
-
-
 
 
 executor.start_polling(dp)
