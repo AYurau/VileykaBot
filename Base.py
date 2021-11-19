@@ -23,7 +23,7 @@ async def add_info(lst):
     conn.commit()
     await check_await(lst)
     lst.clear()
-    print("Данные успешно вставлены в таблицу")
+    #print("Данные успешно вставлены в таблицу")
 
 
 async def find_user(chat_id, finds):
@@ -77,7 +77,7 @@ async def await_database(request):
     request.insert(0, await_id)
     cursor.executemany("""INSERT INTO await (req_id, chat_id, name, thing) VALUES (?, ?, ?, ?)""", (request,))
     conn.commit()
-    print("Данные успешно вставлены в таблицу для поиска")
+    #print("Данные успешно вставлены в таблицу для поиска")
 
 
 async def check_await(lst):
